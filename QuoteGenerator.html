@@ -1,0 +1,215 @@
+<!--
+Alabdullah Mahiyan 
+LMC 2700 Project 4
+Link to website: http://homes.lmc.gatech.edu/~amahiyan3/QuoteGenerator.html
+
+The purpose of this project is to present quotes from people, which are obtained from a quotes API, on a a background that matches it. This is a quote generator that
+holds more meaning through the art presented with it. The quotes were from a quotes api "quotes on design" and the background images were from flickr using an api. 
+An API was also used to get google fonts which change for each quote presented after refreshing the page. The final product is quotes on a white transparent background
+over a background image that matches the quote using keywords from the quotes.  
+ -->
+
+<html>
+
+    <head>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+	<script type="text/javascript">
+	 
+	 // generate random background using the flickr api
+	 function genRanBackground(keyword) {
+	 //json get for flickr api
+	     $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?jsoncallback=?",
+		       {
+			   //settings tags, mode of tagging, and format from keyword 
+			   tags: keyword,
+			   tagmode: "any",
+			   format: "json"
+		       },
+		       function(data) {
+			   //random number is rounded down of item lengtth
+			   var rndNum = Math.floor(Math.random() * data.items.length);
+			   
+			   //image is random 
+			   var img_src = data.items[rndNum]['media']['m'].replace("_m", "_b");
+			   
+			   //set styling of background 
+			   $('body').css('background-image', "url('" + img_src + "')");
+			   $('body').css('background-size', "contain");
+			   $('body').css('background-position', "center");
+			   $('body').css('background-repeat', "no-repeat");
+			 
+			   
+			   
+		   }
+	     );
+	 }
+	 
+	 // using quotes on design api, get random quotes
+	 function genRandQuote() {
+	 //ajax call to domain retrieving a quote 
+	     $.ajax( {
+		 url: 'https://quotesondesign.com/wp-json/posts?filter[orderby]=rand&filter[posts_per_page]=1',
+		 //if successful
+		 success: function(data) {
+		     var firstPost = data.shift(); //data passed in as an array "shift" to grab first one
+		     $('#quote-title').text(firstPost.title); //text as title
+		     $('#quote-content').html(firstPost.content); //content of first post
+			 
+		     // use 6 longest words as keywords for getting image
+		     var key = firstPost.content.replace('<p>', '').replace('</p>', '').split(' ').sort(function(a, b){//key is first post split into 6 slices
+			 //taking longest words with length of b - a
+			 return b.length - a.length;
+		     });
+			 //join slices and pass key to generate the background
+		     key = key.slice(1,4).join(",") 
+			 //console
+		     console.log(key)
+		     genRanBackground(key)
+		 },
+		 
+		 cache: false
+	     });
+	 }
+	 
+	</script>
+	
+	<!-- generate random font-->
+	<script type="text/javascript">
+	 var url ="https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyDK4Jz71F7DQCrUhXYaF3xgEXoQGLDk5iE";
+	 var family = "";
+	 
+	 runFont(family);
+	 
+	 var fontsVisited = [];
+	 var fontFamilies = [];
+	 
+	 $.getJSON(url,function(json){
+	     // counts fontFamilies
+	     var countFamilies = json.items.length;
+	     $("#count").text(countFamilies);
+	     // pushes fams to front
+	     $.each(json.items,function(i,type){
+		 fontFamilies.push(type.family);
+		 
+	     });
+	 });
+	 // gets font based on fam name
+	 function runFont(family) {
+	     $.getJSON(url,function(json){
+		 $.each(json.items,function(i,type){
+		     if (type.family === family) {
+			 
+			 //new vars for font attributes
+			 var familyDetails = $("#variants");
+			 //seperate
+			 var fontFamilyPlus = family.replace(/\s/g, '+');
+			 var fontFamilyCSS = "https://fonts.googleapis.com/css?family=" + fontFamilyPlus + ":" + type.variants + "";
+			 
+			 // Removes previous family and style
+			 $(".style").remove();
+			 $("style").remove();
+			 familyDetails.empty();
+			 // Grabs details of family
+			 familyDetails.append("<div class='detail-title'>Variants</div><ul class='list-variant'></ul>");
+			 $(type.variants).each(function(index, item) {
+			     $(".list-variant").append(
+				 $(document.createElement('li')).text(item)
+			     );
+			 });
+			 //append new details 
+			 familyDetails.append("<div class='detail-title'>Subsets</div><ul class='list-subsets'></ul>");
+			 $(type.subsets).each(function(index, item) {
+			     $(".list-subsets").append(
+				 $(document.createElement('li')).text(item)
+			     );
+			 });
+			 //appends them to array of family details making sure each is contained in their div containors 
+			 familyDetails.append("<div class='detail-title horizontal'>Version</div><div class='detail-data'>" + type.version + "</div>");
+			 familyDetails.append("<div class='detail-title horizontal'>Last Modified</div><div class='detail-data'>" + type.lastModified + "</div>");
+			 familyDetails.append("<div class='detail-title'>HTML</div><div class='detail-data'><pre><code class='language-markup'>&lt;link href='"+fontFamilyCSS+"' rel='stylesheet' type='text/css'&gt;</code></pre></div>");
+			 familyDetails.append("<div class='detail-title'>CSS</div><div class='detail-data'><pre><code class='language-css'>font-family: '"+family+"', sans-serif;</code></pre></div>");
+			 familyDetails.append("<a href='http://www.google.com/fonts#UsePlace:use/Collection:"+fontFamilyPlus+"' class='btn'>View on Google Fonts &rarr;</a>");
+			
+			 $("head").append("<link href='"+ fontFamilyCSS +"' rel='stylesheet' type='text/css' class='style'>");
+			 $("body").css("font-family",family);
+			 // If family has any modifications like italics or bold, get
+			 if(familyDetails.text().match('italic')){
+			     $("head").append("<style>.main em { font-style: italic; }");
+			 }
+			 if(familyDetails.text().match('700')){
+			     $("head").append("<style>.main strong,h1,h2,h3 { font-weight: 700; }");
+			 }
+			 else if(familyDetails.text().match('800')){
+			     $("head").append("<style>.main strong,h1,h2,h3 { font-weight: 800; }");
+			 }
+			 else if(familyDetails.text().match('900')){
+			     $("head").append("<style>.main strong,h1,h2,h3 { font-weight: 900; }");
+			 }
+			 // Save fontsVisited families
+			 fontsVisited.push( family );
+			 var visit="";
+			 $.each(fontsVisited, function(i, val) {
+			     visit+= "<li class='link-history' data-family='"+ val +"'>" + val + "</li>";
+			 });
+			 $('#fontsVisited').html(visit);
+			
+			 $(".link-history").click(function(){
+			 //link to new font
+			     var removed = $(this).attr("data-family");
+			     runFont(removed);
+			     $("#font-search").attr("placeholder",removed);
+			     // remove first instance from array if fonts full 
+			     if ($.inArray(removed, fontsVisited) !== -1) {
+				 fontsVisited.splice( $.inArray(removed, fontsVisited), 1 );
+			     }
+			 });
+		     }
+		 });
+	     });
+	 }
+	 // Gets a random font
+	 function genRandFont() {
+	 
+		//call back to font generator
+	     $.getJSON(url,function(json){
+		 var fontCount = json.items.length,
+		     random = Math.ceil(Math.random() * fontCount);
+		 $.each(json.items,function(i,type){
+		     if(i === random){
+			 var family = type.family;
+			 $("#font-search").attr("placeholder", family);
+			 runFont(family);
+		     }
+		 });
+	     });
+	 }
+	 // fetches the font and quote
+	 $( document ).ready(function() {
+	     genRandFont();
+	     genRandQuote(); // calls method to generate a random background
+	 });
+	     
+	</script>	
+    </head>
+
+    <body>
+	
+	<!-- align center -->
+	<div style="position: relative; width: 100%; height: 100%;">
+	    <div style="background-color: rgba(255,255,255,0.75);
+			padding: 40px;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			">
+		<h1>
+		    <span id="quote-content"></span>
+		    - <span id="quote-title"></span>
+		</h1>
+	    </div>
+	    
+	</div>
+    </body>
+</html>
